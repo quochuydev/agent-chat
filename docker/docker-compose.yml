@@ -1,0 +1,53 @@
+# AI Video Agent — two-service deployment (Dokploy-ready).
+#
+#   web   → Next.js agent + chat UI, public on :3334
+#   video → FastAPI connector + job store, internal only (web talks to it over the
+#           compose network at http://video:3333)
+#
+# Env: set OPENAI_API_KEY (and optionally OPENAI_BASE_URL / OPENAI_MODEL) in Dokploy's
+# Environment settings or a .env file beside this compose. See .env.example.
+
+services:
+  video:
+    build:
+      context: ../video
+      dockerfile: ../docker/Dockerfile.video
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-}
+      VIDEO_JOBS_DB: /data/jobs.db
+      # Enables the Imagen image backend (provider="imagen"). Works in this Linux container
+      # since generate_imagen.py is a pure cloud call. Leave empty to disable Imagen.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      IMAGEN_MODEL: ${IMAGEN_MODEL:-imagen-4.0-fast-generate-001}
+      # Cost guardrails (hard-capped by the API). Keep in sync with the web service.
+      MAX_VIDEO_DURATION_SECONDS: ${MAX_VIDEO_DURATION_SECONDS:-30}
+      MAX_IMAGES_PER_VIDEO: ${MAX_IMAGES_PER_VIDEO:-10}
+    volumes:
+      - video_data:/data # durable job store (sqlite fallback when no DATABASE_URL)
+      - video_runs:/app/api/runs # produced artifacts (audio/images/projects)
+    expose:
+      - "3333"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../web
+      dockerfile: ../docker/Dockerfile.web
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY in the environment}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in the environment}
+      WEB_API_URL: http://video:3333
+      # Cost guardrails (agent clamps to these). Keep in sync with the video service.
+      MAX_VIDEO_DURATION_SECONDS: ${MAX_VIDEO_DURATION_SECONDS:-30}
+      MAX_IMAGES_PER_VIDEO: ${MAX_IMAGES_PER_VIDEO:-10}
+    depends_on:
+      - video
+    ports:
+      - "3334:3334"
+    restart: unless-stopped
+
+volumes:
+  video_data:
+  video_runs:

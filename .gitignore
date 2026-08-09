@@ -1,0 +1,21 @@
+node_modules
+.next
+.env
+.env.local
+next-env.d.ts
+tsconfig.tsbuildinfo
+.DS_Store
+
+.vercel
+.venv
+.venv-api
+
+*.wav
+
+# connector runtime artifacts (video/api)
+video/jobs.db
+video/api/runs/
+__pycache__/
+*.pyc
+
+personal

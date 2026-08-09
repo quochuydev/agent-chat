@@ -1,0 +1,8 @@
+# Connector layer only (doc 02). The heavy model deps (kokoro, mflux, soundfile)
+# stay in the video/.venv used by the scripts and are never imported by the API.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+SQLAlchemy>=2.0
+# Postgres (Neon) driver for the job store when DATABASE_URL is set.
+psycopg[binary]>=3.2
