@@ -9,11 +9,6 @@ import { PreviewCanvas } from "@/components/preview-canvas";
 import { Toolbar } from "@/components/toolbar";
 import { DEFAULT_CHANNEL_ID } from "@/lib/channels";
 import {
-  DEFAULT_IMAGE_PROVIDER,
-  isImageProviderId,
-  type ImageProviderId,
-} from "@/lib/image-providers";
-import {
   createConversation,
   deleteConversation,
   deriveTitle,
@@ -34,9 +29,6 @@ export function ChatShell() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [filesOpen, setFilesOpen] = useState(false);
   const [filesQuery, setFilesQuery] = useState("");
-  // Image backend for the next generate_images call. An app-level preference (not tied to
-  // a conversation) persisted in localStorage; sent to the connector as `provider`.
-  const [imageProvider, setImageProvider] = useState<ImageProviderId>(DEFAULT_IMAGE_PROVIDER);
   // Draggable width of the left chat pane (px, md+ screens only). Persisted across sessions.
   const CHAT_MIN_WIDTH = 320;
   const CHAT_MAX_WIDTH = 720;
@@ -47,8 +39,6 @@ export function ChatShell() {
   useEffect(() => {
     const stored = Number(window.localStorage.getItem("chatWidth"));
     if (stored >= CHAT_MIN_WIDTH && stored <= CHAT_MAX_WIDTH) setChatWidth(stored);
-    const storedProvider = window.localStorage.getItem("imageProvider");
-    if (isImageProviderId(storedProvider)) setImageProvider(storedProvider);
     const mq = window.matchMedia("(min-width: 768px)");
     const sync = () => setIsDesktop(mq.matches);
     sync();
@@ -150,11 +140,6 @@ export function ChatShell() {
     scheduleSave(activeId, current.title, messagesById[activeId] ?? [], channel);
   };
 
-  const handleSelectProvider = (id: ImageProviderId) => {
-    setImageProvider(id);
-    window.localStorage.setItem("imageProvider", id);
-  };
-
   const handleNew = async () => {
     const fresh = await createConversation();
     setMetas((prev) => [
@@ -213,8 +198,6 @@ export function ChatShell() {
         title={active.title}
         channelId={active.channel}
         onSelectChannel={handleSelectChannel}
-        imageProvider={imageProvider}
-        onSelectProvider={handleSelectProvider}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         onOpenFiles={() => openFiles()}
       />
@@ -229,7 +212,6 @@ export function ChatShell() {
             messages={messages}
             channelId={active.channel}
             onSelectChannel={handleSelectChannel}
-            imageProvider={imageProvider}
             onChange={handleChange}
             selectedJobId={selectedJobId}
             onSelectJob={setSelectedJobId}

@@ -1,5 +1,0 @@
-# Test deps for the connector. Install on top of requirements-api.txt:
-#   .venv-api/bin/pip install -r requirements-dev.txt
--r requirements-api.txt
-pytest>=8.0
-httpx>=0.27          # required by Starlette's TestClient

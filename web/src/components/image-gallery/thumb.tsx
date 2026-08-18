@@ -2,7 +2,6 @@
 
 import { Loader2, RefreshCw } from "lucide-react";
 
-import { useApiBase } from "@/lib/connector";
 import type { JobImage } from "@/lib/types";
 import { imgSrc } from "./utils";
 
@@ -19,13 +18,12 @@ export function Thumb({
   onOpen: () => void;
   onRegenerate: () => void;
 }) {
-  const base = useApiBase();
   const key = img.versions.length;
   return (
     <div className="group relative aspect-video overflow-hidden rounded-lg bg-[#e7eaf0]">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={imgSrc(base, jobId, img.name, key)}
+        src={imgSrc(jobId, img.name, key)}
         alt={img.prompt ?? img.name}
         onClick={onOpen}
         className="h-full w-full cursor-pointer object-cover"

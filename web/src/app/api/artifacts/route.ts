@@ -1,25 +1,25 @@
 import { NextResponse } from "next/server";
 
-import { API_BASE } from "@/lib/chat/config";
+import { listRunFiles } from "@/lib/jobs/files";
+import * as store from "@/lib/jobs/store";
 
-// Proxy for the Files drawer: forwards GET /api/artifacts → connector's /artifacts,
-// which lists every job and its run-dir files. Per-file download/preview goes through
-// the existing catch-all proxy (/api/jobs/{id}/file/{path}).
+// Every job that produced files, with its run-dir contents (powers the Files drawer).
+// Jobs are ordered newest-activity-first by their files' latest mtime; jobs with no run
+// dir or no files are omitted. Was: proxy to the connector's /artifacts.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  try {
-    const res = await fetch(`${API_BASE.replace(/\/$/, "")}/artifacts`, { cache: "no-store" });
-    return new Response(res.body, {
-      status: res.status,
-      headers: { "Content-Type": res.headers.get("content-type") ?? "application/json" },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "connector unreachable";
-    return NextResponse.json(
-      { error: `${message} (is the video API on ${API_BASE}?)` },
-      { status: 502 },
-    );
-  }
+  const jobs = await store.listJobs();
+  const withFiles = jobs
+    .map((j) => {
+      const files = listRunFiles(j.id);
+      if (files.length === 0) return null;
+      const latest = Math.max(...files.map((f) => f.mtime));
+      return { id: j.id, tool: j.tool, status: j.status, mtime: latest, files };
+    })
+    .filter((j): j is NonNullable<typeof j> => j !== null)
+    .sort((a, b) => b.mtime - a.mtime);
+
+  return NextResponse.json({ jobs: withFiles });
 }

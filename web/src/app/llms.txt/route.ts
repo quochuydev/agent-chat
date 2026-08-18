@@ -19,7 +19,7 @@ AI Video Agent (${SITE_URL}) is a web app for creating short videos from a conve
 ## Features
 - Script writing: on-brand scripts and scene breakdowns from a one-line prompt.
 - AI voiceover: lifelike narration in a range of selectable voices.
-- Scene generation: an image per beat, using local FLUX.1-schnell or Google Imagen 4 Fast.
+- Scene generation: an image per beat, using Google Imagen 4 Fast.
 - Auto assembly: timing, transitions, and captions stitched into a finished cut.
 - YouTube metadata: suggested titles, descriptions, and tags.
 - Channels: pick a content niche (e.g. money & economics, health & lifestyle) or bring your own idea.

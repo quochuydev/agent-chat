@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 
-import { connectorUrl, useApiBase } from "@/lib/connector";
+import { connectorUrl } from "@/lib/connector";
 import { cn } from "@/lib/utils";
 import type { JobStatus } from "@/lib/types";
 
@@ -70,10 +70,9 @@ function fmtDate(mtimeSeconds: number): string {
 }
 
 // Each path segment is encoded so nested files (images/001_00-00.png) survive the route.
-// `base` (from useApiBase) targets the user's connector directly when configured.
-function fileUrl(base: string | null, jobId: string, name: string): string {
+function fileUrl(jobId: string, name: string): string {
   const path = name.split("/").map(encodeURIComponent).join("/");
-  return connectorUrl(`/jobs/${jobId}/file/${path}`, base);
+  return connectorUrl(`/jobs/${jobId}/file/${path}`);
 }
 
 export function FilesDrawer({
@@ -90,7 +89,6 @@ export function FilesDrawer({
   const [loading, setLoading] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
-  const base = useApiBase();
 
   const load = async () => {
     setLoading(true);
@@ -224,7 +222,7 @@ export function FilesDrawer({
                     <span className="truncate font-mono text-[11px] text-[#90949c]">#{job.id}</span>
                   </button>
                   <a
-                    href={connectorUrl(`/jobs/${job.id}/archive`, base)}
+                    href={connectorUrl(`/jobs/${job.id}/archive`)}
                     download={`${job.id}.zip`}
                     aria-label={`Download all ${job.files.length} files as .zip`}
                     title="Download all as .zip"
@@ -240,7 +238,7 @@ export function FilesDrawer({
                 {!isCollapsed && (
                   <ul className="ml-3 border-l border-[#e9ebee] pl-2">
                     {job.files.map((f) => {
-                      const url = fileUrl(base, job.id, f.name);
+                      const url = fileUrl(job.id, f.name);
                       const Icon = KIND_ICON[f.kind];
                       return (
                         <li

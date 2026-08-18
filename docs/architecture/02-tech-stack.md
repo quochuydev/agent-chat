@@ -12,15 +12,13 @@
 │ OpenAI-compatible chat completions + tool calls  │
 │ web/src/app/api/chat/route.ts                    │
 │ (any provider via OPENAI_BASE_URL / OPENAI_MODEL)│
-├─ Connector ──────────────────────────────────────┤
-│ FastAPI (Python) + Uvicorn · Pydantic            │
-│ video/api/: main · tasks · worker · jobs · models│
 ├─ Jobs ───────────────────────────────────────────┤
-│ durable store: SQLite (jobs.db) or Neon Postgres │
-│ in-process worker: 2 threads, GPU-serial images  │
+│ web/src/lib/jobs/: store · worker · runners       │
+│ durable store: Neon Postgres (`jobs` table)      │
+│ in-process worker: concurrency 2, same Node proc │
 ├─ Models ─────────────────────────────────────────┤
-│ Kokoro-82M (voice) · FLUX.1-schnell (local)      │
-│ Google Imagen (cloud, GEMINI_API_KEY)            │
+│ OpenAI TTS (voice, cloud)                        │
+│ Google Imagen (images, cloud, GEMINI_API_KEY)    │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -29,44 +27,44 @@
 ```mermaid
 flowchart LR
     subgraph ADD
-      A1[FastAPI + Uvicorn]
-      A2[Pydantic]
-      A3[SQLite / Neon job store]
-      A4[In-process thread worker]
+      A1[Neon Postgres job store]
+      A2[In-process async worker]
     end
     subgraph AVOID
       N1[LangChain / agent framework]
-      N2[heavy infra before it leaves laptop]
+      N2[a separate backend service]
     end
 ```
 
-Deliberately **not** used: a third-party agent framework (the tool loop is
-hand-rolled in `route.ts`), a message broker (the in-process queue covers
-the minutes tier; RQ/arq + Redis is the documented hours-tier swap, doc 06).
+Deliberately **not** used: a third-party agent framework (the tool loop is hand-rolled
+in `route.ts`), a message broker (the in-process queue covers the minutes tier; a real
+queue — BullMQ/Redis or similar — is the documented hours-tier swap, doc 06), and a
+second service — every generation step is a cloud API call, so the job runners live in
+the same Next.js process as the agent.
 
-## Why FastAPI
+## Why one service
 
 ```
-lives in video/ venv ─ shells out to the scripts
-auto OpenAPI docs    ─ free tool spec at /docs
-Pydantic types       ─ mirror web/ TS types (models.py ↔ types.ts)
-backend-native       ─ no AI-specific tooling
+one Node process     ─ agent loop + job queue + runners, no inter-service hop
+cloud-only models    ─ TTS and Imagen are plain HTTPS calls, no GPU/venv needed
+shared types         ─ runner request types (lib/jobs/runners.ts) used directly
+                        by the tool loop, no wire-format duplication
 ```
 
 ## Storage
 
 ```
-web (conversations, messages)   Neon Postgres  — Clerk user_id scoped
-video (job store)               SQLite jobs.db — or the SAME Neon DB when
-                                DATABASE_URL is set (run_api.sh loads .env)
+conversations, messages   Neon Postgres — Clerk user_id scoped
+job store (status/result) Neon Postgres — same DB, `jobs` table (schema.sql)
+job artifacts (wav/png/…) local disk under RUNS_DIR (a mounted volume in Docker)
 ```
 
 ## Scale dial (one knob, set by job length)
 
 ```
 minutes ───────────────────────────────────────► hours
-in-process worker threads                     RQ/arq + Redis
-SQLite / Neon job store (durable already)     unchanged
-poll while open                               durable + notify
+in-process worker (lib/jobs/worker.ts)         real queue (BullMQ/Redis, etc.)
+Neon job store (durable already)               unchanged
+poll while open                                durable + notify
                         (see doc 06)
 ```

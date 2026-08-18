@@ -39,7 +39,7 @@ const FAQS = [
   },
   {
     q: "Which AI voices and image models can I use?",
-    a: "You can choose from a range of narration voices and pick the image model — local FLUX.1-schnell or Google Imagen 4 Fast.",
+    a: "You can choose from a range of narration voices, and every scene is illustrated with Google Imagen 4 Fast.",
   },
   {
     q: "How much does it cost?",

@@ -5,9 +5,8 @@ export const POLL_MS = 1500;
 
 // src for an image; `key` busts the browser cache after a regenerate replaces the
 // canonical file (the filename is stable, so versions.length changes the URL).
-// `base` comes from useApiBase() in the rendering component (hydration-safe).
-export function imgSrc(base: string | null, jobId: string, name: string, key: number) {
-  return `${connectorUrl(`/jobs/${jobId}/images/${name}`, base)}?k=${key}`;
+export function imgSrc(jobId: string, name: string, key: number) {
+  return `${connectorUrl(`/jobs/${jobId}/images/${name}`)}?k=${key}`;
 }
 
 export async function pollUntilDone(jobId: string): Promise<JobStatus> {

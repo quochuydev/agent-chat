@@ -2,7 +2,7 @@
 
 import { Download } from "lucide-react";
 
-import { connectorUrl, useApiBase } from "@/lib/connector";
+import { connectorUrl } from "@/lib/connector";
 import type { Job } from "@/lib/types";
 import { AudioPlayer } from "./audio-player";
 import { TextViewer } from "./text-viewer";
@@ -14,7 +14,6 @@ export function DoneBody({
   job: Job;
   onOpenJob?: (jobId: string) => void;
 }) {
-  const base = useApiBase();
   // A source job id rendered as a button that opens the Files drawer filtered to that job.
   const jobLink = (id: string) =>
     onOpenJob ? (
@@ -76,7 +75,7 @@ export function DoneBody({
         )}
         <div className="flex flex-wrap gap-2">
           <a
-            href={connectorUrl(`/jobs/${job.id}/project`, base)}
+            href={connectorUrl(`/jobs/${job.id}/project`)}
             download={`${job.id}.opencut.json`}
             className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-[#0084ff] px-3 py-1.5 text-[12px] font-medium text-white hover:bg-[#0072db]"
           >
@@ -85,7 +84,7 @@ export function DoneBody({
           </a>
           {captions > 0 && (
             <a
-              href={connectorUrl(`/jobs/${job.id}/srt`, base)}
+              href={connectorUrl(`/jobs/${job.id}/srt`)}
               download={`${job.id}.srt`}
               className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[#e4e6eb] px-3 py-1.5 text-[12px] font-medium text-[#050505] hover:bg-[#f0f2f5]"
             >

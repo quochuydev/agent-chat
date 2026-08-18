@@ -22,11 +22,9 @@ export async function POST(req: Request) {
     const body = (await req.json()) as {
       messages?: ChatMessage[];
       channelId?: string;
-      imageProvider?: string;
     };
     const history = body.messages ?? [];
     const channelId = body.channelId;
-    const imageProvider = body.imageProvider;
     if (history.length === 0) {
       return NextResponse.json({ message: "No messages provided.", jobs: [] });
     }
@@ -56,7 +54,7 @@ export async function POST(req: Request) {
           args = {};
         }
 
-        const { result, job } = await runTool(call.function.name, args, channelId, imageProvider);
+        const { result, job } = await runTool(call.function.name, args, channelId);
         if (job) createdJobs.push(job);
 
         conversation.push({

@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { ChevronLeft, ChevronRight, Loader2, RefreshCw, X } from "lucide-react";
 
-import { useApiBase } from "@/lib/connector";
 import type { JobImage } from "@/lib/types";
 import { imgSrc } from "./utils";
 
@@ -24,7 +23,6 @@ export function Lightbox({
   onNavigate: (i: number) => void;
   onRegenerate: () => void;
 }) {
-  const base = useApiBase();
   const img = images[index];
   const prev = () => onNavigate((index - 1 + images.length) % images.length);
   const next = () => onNavigate((index + 1) % images.length);
@@ -72,7 +70,7 @@ export function Lightbox({
       <div className="flex max-h-full max-w-3xl flex-col items-center" onClick={(e) => e.stopPropagation()}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={imgSrc(base, jobId, img.name, img.versions.length)}
+          src={imgSrc(jobId, img.name, img.versions.length)}
           alt={img.prompt ?? img.name}
           className="max-h-[70vh] rounded-lg object-contain"
         />

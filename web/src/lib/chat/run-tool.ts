@@ -1,22 +1,51 @@
+import { existsSync, readFileSync } from "node:fs";
+
 import { getChannel } from "@/lib/channels";
 import { MAX_IMAGES_PER_VIDEO, MAX_VIDEO_DURATION_SECONDS } from "@/lib/config";
-import { getImageProvider } from "@/lib/image-providers";
+import { deleteCaptions } from "@/lib/jobs/build-project";
+import { resolveArtifact } from "@/lib/jobs/files";
+import {
+  runBuild,
+  runImages,
+  runTranscript,
+  runVoiceover,
+  type BuildRequest,
+  type ImagesRequest,
+  type TranscriptRequest,
+  type VoiceoverRequest,
+} from "@/lib/jobs/runners";
+import * as store from "@/lib/jobs/store";
+import { isVoice } from "@/lib/jobs/tts";
+import type { Runner } from "@/lib/jobs/worker";
+import { worker } from "@/lib/jobs/worker";
 import type { JobRef } from "@/lib/types";
 
-import { API_BASE } from "./config";
-import { connector } from "./connector";
 import { draftScript, draftYoutubeMetadata } from "./openai";
-import { ASYNC_ENDPOINTS } from "./tools";
 
 // Run one tool call → return { result for the LLM, optional job to surface to the UI }.
 // `channelId` is the conversation's active channel: it sets the script voice and the
-// image art style so every video stays on-brand for its niche. `imageProvider` is the
-// app-level image backend (FLUX vs Imagen) the user picked in the toolbar.
+// image art style so every video stays on-brand for its niche. Async tools create a job
+// row and hand it to the in-process worker (lib/jobs/worker.ts) directly — this function
+// already runs server-side inside /api/chat/route.ts, so there's no HTTP hop.
+type EnqueueResult = { result: { job_id: string; status: "queued"; note: string }; job: JobRef };
+
+async function enqueue<P extends Record<string, unknown>>(
+  tool: string,
+  runner: Runner<P>,
+  params: P,
+): Promise<EnqueueResult> {
+  const jobId = await store.create(tool, params);
+  worker.submit(jobId, runner, params);
+  return {
+    result: { job_id: jobId, status: "queued", note: "Started — running in the background, the user sees live progress." },
+    job: { id: jobId, tool, status: "queued" },
+  };
+}
+
 export async function runTool(
   name: string,
   args: Record<string, unknown>,
   channelId?: string | null,
-  imageProvider?: string | null,
 ): Promise<{ result: unknown; job?: JobRef }> {
   if (name === "write_script") {
     const topic = String(args.topic ?? "");
@@ -33,41 +62,31 @@ export async function runTool(
 
   if (name === "get_job") {
     const jobId = String(args.job_id ?? "");
-    const { data } = await connector("GET", `/jobs/${jobId}`);
-    return { result: data };
+    const job = await store.get(jobId);
+    return { result: job ?? { error: `job ${jobId} not found` } };
   }
 
   if (name === "read_subtitles") {
     const jobId = String(args.job_id ?? "");
-    try {
-      const res = await fetch(`${API_BASE}/jobs/${jobId}/srt`);
-      if (!res.ok) {
-        const detail = (await res.json().catch(() => ({}))) as { detail?: string };
-        return { result: { error: detail.detail ?? `no subtitles for job ${jobId}` } };
-      }
-      return { result: { srt: await res.text() } };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "connector unreachable";
-      return { result: { error: `${message} (is the video API on ${API_BASE}?)` } };
-    }
+    const job = await store.get(jobId);
+    const path = resolveArtifact(job, jobId, "srt_file", ".srt");
+    if (!path) return { result: { error: `no subtitles for job ${jobId}` } };
+    return { result: { srt: readFileSync(path, "utf8") } };
   }
 
   if (name === "suggest_youtube_metadata") {
     // Prefer transcript text if the agent passed it; otherwise read the real file
-    // from the connector (timestamped transcript first, SRT captions as fallback).
+    // from disk (timestamped transcript first, SRT captions as fallback).
     let transcript = typeof args.transcript === "string" ? args.transcript.trim() : "";
     const jobId = String(args.job_id ?? "");
     if (!transcript && jobId) {
-      const t = await connector("GET", `/jobs/${jobId}/transcript`);
-      if (t.ok && typeof (t.data as { transcript?: string }).transcript === "string") {
-        transcript = (t.data as { transcript: string }).transcript.trim();
+      const job = await store.get(jobId);
+      const transcriptPath = resolveArtifact(job, jobId, "transcript_file", ".transcript.txt");
+      if (transcriptPath) {
+        transcript = readFileSync(transcriptPath, "utf8").trim();
       } else {
-        try {
-          const res = await fetch(`${API_BASE}/jobs/${jobId}/srt`);
-          if (res.ok) transcript = (await res.text()).trim();
-        } catch {
-          // fall through to the no-transcript error below
-        }
+        const srtPath = resolveArtifact(job, jobId, "srt_file", ".srt");
+        if (srtPath) transcript = readFileSync(srtPath, "utf8").trim();
       }
     }
     if (!transcript) {
@@ -90,48 +109,72 @@ export async function runTool(
 
   if (name === "delete_subtitles") {
     const jobId = String(args.job_id ?? "");
-    const indices = Array.isArray(args.indices) ? args.indices : [];
-    const { ok, data } = await connector("POST", `/jobs/${jobId}/subtitles/delete`, { indices });
-    return { result: ok ? data : { error: (data as { detail?: string }).detail ?? data } };
+    const indices = Array.isArray(args.indices) ? (args.indices as number[]) : [];
+    const job = await store.get(jobId);
+    if (!job || job.tool !== "build_video" || !job.result) {
+      return { result: { error: "subtitles can only be edited on a finished build job" } };
+    }
+    const result = { ...job.result };
+    const projectFile = result.project_file as string | undefined;
+    if (!projectFile || !existsSync(projectFile)) {
+      return { result: { error: "this build has no project file on disk" } };
+    }
+    try {
+      const summary = deleteCaptions(projectFile, result.srt_file as string | undefined, indices);
+      result.captions = summary.remaining;
+      await store.finish(jobId, result);
+      return { result: summary };
+    } catch (err) {
+      return { result: { error: err instanceof Error ? err.message : "delete failed" } };
+    }
   }
 
-  const endpoint = ASYNC_ENDPOINTS[name];
-  if (!endpoint) return { result: { error: `unknown tool ${name}` } };
+  if (name === "generate_voiceover") {
+    const voice = isVoice(args.voice) ? args.voice : "alloy";
+    const speed = typeof args.speed === "number" ? args.speed : 1.0;
+    const params: VoiceoverRequest = { script: String(args.script ?? ""), voice, speed };
+    const { result, job } = await enqueue(name, runVoiceover, params);
+    return { result, job };
+  }
 
-  // build_video nests its fields under `project`; the others map 1:1.
-  let payload = name === "build_video" ? (args.project as Record<string, unknown>) ?? {} : args;
+  if (name === "generate_transcript") {
+    const voice = isVoice(args.voice) ? args.voice : "alloy";
+    const speed = typeof args.speed === "number" ? args.speed : 1.0;
+    const params: TranscriptRequest = { script: String(args.script ?? ""), voice, speed };
+    const { result, job } = await enqueue(name, runTranscript, params);
+    return { result, job };
+  }
 
-  // Keep the whole video on-brand: append the channel's art style to every shot prompt
-  // so the agent only has to say WHAT is in each scene, not how it's drawn.
-  let cappedNote: string | undefined;
-  if (name === "generate_images" && Array.isArray(payload.prompts)) {
+  if (name === "generate_images") {
     const { imageStyle } = getChannel(channelId);
-    const all = payload.prompts as unknown[];
+    const all = Array.isArray(args.prompts) ? (args.prompts as unknown[]) : [];
     // Cost guardrail: never render more than MAX_IMAGES_PER_VIDEO images per job.
     const limited = all.slice(0, MAX_IMAGES_PER_VIDEO);
-    if (all.length > limited.length) {
-      cappedNote = `Capped from ${all.length} to the ${MAX_IMAGES_PER_VIDEO}-image maximum per video to control cost. `;
-    }
-    payload = {
-      ...payload,
+    const cappedNote =
+      all.length > limited.length
+        ? `Capped from ${all.length} to the ${MAX_IMAGES_PER_VIDEO}-image maximum per video to control cost. `
+        : "";
+    const params: ImagesRequest = {
       prompts: limited.map((p) => `${String(p)}. Style: ${imageStyle}.`),
-      // Route to the user's chosen backend; getImageProvider falls back to the default.
-      provider: getImageProvider(imageProvider).id,
+      width: typeof args.width === "number" ? args.width : undefined,
+      height: typeof args.height === "number" ? args.height : undefined,
     };
+    const { result, job } = await enqueue("generate_images", runImages, params);
+    return { result: { ...result, note: `${cappedNote}${result.note}` }, job };
   }
-  const { ok, data } = await connector("POST", endpoint, payload);
-  if (!ok) return { result: data };
 
-  const jobId = (data as { job_id?: string }).job_id;
-  if (!jobId) return { result: data };
+  if (name === "build_video") {
+    const project = (args.project as Record<string, unknown>) ?? {};
+    const params: BuildRequest = {
+      name: typeof project.name === "string" ? project.name : undefined,
+      audio_file: typeof project.audio_file === "string" ? project.audio_file : undefined,
+      transcript_file: typeof project.transcript_file === "string" ? project.transcript_file : undefined,
+      images_dir: typeof project.images_dir === "string" ? project.images_dir : undefined,
+      include_captions: typeof project.include_captions === "boolean" ? project.include_captions : undefined,
+    };
+    const { result, job } = await enqueue("build_video", runBuild, params);
+    return { result, job };
+  }
 
-  const job: JobRef = { id: jobId, tool: name, status: "queued" };
-  return {
-    result: {
-      job_id: jobId,
-      status: "queued",
-      note: `${cappedNote ?? ""}Started — running in the background, the user sees live progress.`,
-    },
-    job,
-  };
+  return { result: { error: `unknown tool ${name}` } };
 }

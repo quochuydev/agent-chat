@@ -1,6 +1,5 @@
 "use client";
 
-import { useApiBase } from "@/lib/connector";
 import type { JobImage } from "@/lib/types";
 import { imgSrc } from "./utils";
 
@@ -13,7 +12,6 @@ export function Slider({
   images: JobImage[];
   onOpen: (i: number) => void;
 }) {
-  const base = useApiBase();
   return (
     <div className="flex snap-x gap-2 overflow-x-auto pb-1">
       {images.map((img, i) => (
@@ -21,7 +19,7 @@ export function Slider({
           <div className="aspect-video overflow-hidden rounded-lg bg-[#e7eaf0]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={imgSrc(base, jobId, img.name, img.versions.length)}
+              src={imgSrc(jobId, img.name, img.versions.length)}
               alt={img.prompt ?? img.name}
               onClick={() => onOpen(i)}
               className="h-full w-full cursor-pointer object-cover"

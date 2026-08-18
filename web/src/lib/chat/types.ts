@@ -17,6 +17,3 @@ export type OpenAiResponse = {
   choices: Array<{ message: OpenAiMessage; finish_reason: string }>;
   error?: { message: string };
 };
-
-// Result of a call to the video connector (video/ :3333).
-export type ConnectorResult = { ok: boolean; data: unknown; status: number };

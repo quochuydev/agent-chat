@@ -3,16 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Square, Volume2 } from "lucide-react";
 
-import { connectorUrl, useApiBase } from "@/lib/connector";
+import { connectorUrl } from "@/lib/connector";
 import { cn } from "@/lib/utils";
 
 type State = "idle" | "loading" | "playing" | "error";
 
-// A small "hear this voice" chip. Clicking fetches a short cached TTS preview from the
-// connector (GET /voice/sample) and plays it. First play may take a few seconds while the
-// model loads; the wav is cached server-side and as a blob URL here, so replays are instant.
+// A small "hear this voice" chip. Clicking fetches a short cached TTS preview
+// (GET /api/voice/sample) and plays it. First play may take a few seconds while the
+// clip synthesizes; the wav is cached server-side and as a blob URL here, so replays
+// are instant.
 export function VoiceSample({ voice }: { voice: string }) {
-  const base = useApiBase();
   const [state, setState] = useState<State>("idle");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const urlRef = useRef<string | null>(null);
@@ -37,7 +37,7 @@ export function VoiceSample({ voice }: { voice: string }) {
       setState("loading");
       if (!urlRef.current) {
         const res = await fetch(
-          connectorUrl(`/voice/sample?voice=${encodeURIComponent(voice)}`, base),
+          connectorUrl(`/voice/sample?voice=${encodeURIComponent(voice)}`),
           { cache: "no-store" },
         );
         if (!res.ok) throw new Error(`sample failed (${res.status})`);

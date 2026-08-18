@@ -1,5 +1,5 @@
--- Conversations + messages persistence (Neon Postgres). Run once against DATABASE_URL.
--- Shares the database with the Python connector's `jobs` table.
+-- Conversations + messages + async jobs persistence (Neon Postgres). Run once against
+-- DATABASE_URL (pnpm db:init).
 
 CREATE TABLE IF NOT EXISTS conversations (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -32,3 +32,21 @@ ALTER TABLE messages ADD COLUMN IF NOT EXISTS suggestions JSONB;
 
 -- Migration for databases created before conversations had a channel.
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'money';
+
+-- Async job store (write_script/generate_voiceover/generate_images/build_video), formerly
+-- owned by the standalone Python connector — now written/read by web/src/lib/jobs/store.ts.
+CREATE TABLE IF NOT EXISTS jobs (
+  id          TEXT PRIMARY KEY,
+  tool        TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'queued',
+  stage       TEXT NOT NULL DEFAULT '',
+  current     INTEGER NOT NULL DEFAULT 0,
+  total       INTEGER NOT NULL DEFAULT 0,
+  params      JSONB NOT NULL DEFAULT '{}'::jsonb,
+  result      JSONB,
+  error       TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS jobs_tool_idx ON jobs (tool);

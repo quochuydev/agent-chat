@@ -29,7 +29,7 @@ export const CHANNELS: Channel[] = [
       "Open with a strong hook, keep every line vivid and concise, ground any claims in real facts (never invent names or statistics), and close with one memorable takeaway.",
     imageStyle:
       "clean, visually striking illustration that fits the topic; a single consistent style across every shot, clear composition, vivid but tasteful color, no text or watermarks",
-    defaultVoice: "af_sky",
+    defaultVoice: "shimmer",
     starters: [
       "A 60-second explainer on how black holes work",
       "The history of coffee, in 60 seconds",
@@ -48,7 +48,7 @@ export const CHANNELS: Channel[] = [
       "Decode every economic term in plain English the moment you use it. Include one counterintuitive twist (e.g. \"saving can lose you money\"). Close by reflecting the idea back onto a choice the viewer makes with their own money.",
     imageStyle:
       "flat hand-drawn 2D doodle cartoon, bold black hand-drawn outlines, flat solid colors, slightly wobbly marker lines, ZERO gradients, ZERO shadows; money motifs — coins, banknotes, piggy banks, wallets, simple bar/line charts, stick-figure people",
-    defaultVoice: "am_michael",
+    defaultVoice: "onyx",
     starters: [
       "Why your money is worth less every year",
       "How banks actually create money out of nothing",
@@ -67,7 +67,7 @@ export const CHANNELS: Channel[] = [
       "Decode every scientific term in plain English immediately. Treat bodily and taboo topics honestly and tastefully, never crudely. Include one counterintuitive twist, and close by reflecting the science back onto something the viewer feels or does today.",
     imageStyle:
       "flat hand-drawn 2D doodle cartoon, bold black hand-drawn outlines, flat solid colors, slightly wobbly marker lines, ZERO gradients, ZERO shadows; body & health motifs — stick-figure people, heart, brain, food, water, bed/sleep, simple anatomy",
-    defaultVoice: "af_sky",
+    defaultVoice: "shimmer",
     starters: [
       "What happens to your body when you don't sleep",
       "Why you crave sugar even when you're full",
@@ -86,7 +86,7 @@ export const CHANNELS: Channel[] = [
       "Keep every line something you can SEE. Keep the action stylized and awe-driven — spectacle and scale, never gore or realistic violence.",
     imageStyle:
       "cinematic hyper-detailed 3D render, dramatic volumetric lighting, epic wide battlefield shot; biomechanical hybrids — animals and plants fused with tank armor, rocket pods, missile launchers, exhaust vents and gears; smoke, sparks and dust, gritty military color palette with vivid highlights, strong sense of scale and motion",
-    defaultVoice: "am_eric",
+    defaultVoice: "fable",
     starters: [
       "A rhino fused with a battle tank charges the front line",
       "Wasp-missile swarm versus an armored oak-tree fortress",

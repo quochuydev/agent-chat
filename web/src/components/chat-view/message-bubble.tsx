@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Markdown } from "@/components/markdown";
+import { VOICES } from "@/lib/jobs/tts";
 import { cn } from "@/lib/utils";
 import type { DisplayMessage, JobRef } from "@/lib/types";
 import { VoiceSample } from "./voice-sample";
@@ -23,9 +24,9 @@ const TOOL_META: Record<string, { label: string; icon: LucideIcon }> = {
   build_video: { label: "Built video", icon: Film },
 };
 
-// Kokoro voice ids mentioned in a message (af_sky, am_michael, bm_george, …) — surfaced
-// as "hear this voice" chips so the user can preview the narration before generating.
-const VOICE_RE = /\b[ab][fm]_[a-z]+\b/g;
+// TTS voice ids mentioned in a message (alloy, onyx, fable, …) — surfaced as "hear this
+// voice" chips so the user can preview the narration before generating.
+const VOICE_RE = new RegExp(`\\b(${VOICES.join("|")})\\b`, "g");
 function voicesIn(text: string): string[] {
   return Array.from(new Set(text.match(VOICE_RE) ?? []));
 }

@@ -4,29 +4,21 @@ import { UserButton } from "@clerk/nextjs";
 import { ChevronDown, Database, Eye, PanelLeft, Star } from "lucide-react";
 
 import { ChannelSwitcher } from "@/components/channel-switcher";
-import { ConnectorStatus } from "@/components/connector-status";
-import { ImageProviderSwitcher } from "@/components/image-provider-switcher";
-import type { ImageProviderId } from "@/lib/image-providers";
 import { cn } from "@/lib/utils";
 
-// v0-style top chrome: sidebar/title on the left, the local video-connector status +
-// run-command guide in the center, and the account menu on the right. Wired controls:
-// the sidebar toggle (☰ + title), the channel switcher, the connector-status pill, and
-// the output button (🗄 → Files drawer).
+// v0-style top chrome: sidebar/title on the left, spacer in the center, and the account
+// menu on the right. Wired controls: the sidebar toggle (☰ + title), the channel
+// switcher, and the output button (🗄 → Files drawer).
 export function Toolbar({
   title,
   channelId,
   onSelectChannel,
-  imageProvider,
-  onSelectProvider,
   onToggleSidebar,
   onOpenFiles,
 }: {
   title: string;
   channelId: string;
   onSelectChannel: (id: string) => void;
-  imageProvider: string;
-  onSelectProvider: (id: ImageProviderId) => void;
   onToggleSidebar: () => void;
   onOpenFiles: () => void;
 }) {
@@ -59,12 +51,8 @@ export function Toolbar({
 
         <div className="ml-1 flex items-center gap-1.5">
           <ChannelSwitcher channelId={channelId} onSelect={onSelectChannel} />
-          <ImageProviderSwitcher providerId={imageProvider} onSelect={onSelectProvider} />
         </div>
       </div>
-
-      {/* Center: local video-connector status + run-command guide */}
-      <ConnectorStatus />
 
       {/* Right: account */}
       <div className="flex items-center gap-1">

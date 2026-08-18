@@ -1,13 +1,11 @@
 "use client";
 
-import { connectorUrl, useApiBase } from "@/lib/connector";
+import { connectorUrl } from "@/lib/connector";
 
-// Click to hear (native audio element fed by the connector's /audio route, called
-// directly when an ?apiUrl= backend is configured, else via the same-origin proxy).
+// Click to hear (native audio element fed by the job's /audio route).
 export function AudioPlayer({ jobId }: { jobId: string }) {
-  const base = useApiBase();
   return (
-    <audio controls preload="none" className="h-9 w-full" src={connectorUrl(`/jobs/${jobId}/audio`, base)}>
+    <audio controls preload="none" className="h-9 w-full" src={connectorUrl(`/jobs/${jobId}/audio`)}>
       Your browser does not support audio playback.
     </audio>
   );

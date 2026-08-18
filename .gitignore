@@ -7,15 +7,8 @@ tsconfig.tsbuildinfo
 .DS_Store
 
 .vercel
-.venv
-.venv-api
 
-*.wav
-
-# connector runtime artifacts (video/api)
-video/jobs.db
-video/api/runs/
-__pycache__/
-*.pyc
+# job artifacts (audio/images/project files) — web/src/lib/jobs/runs.ts
+web/.data/
 
 personal

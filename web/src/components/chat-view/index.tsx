@@ -13,7 +13,6 @@ type Props = {
   messages: DisplayMessage[];
   channelId: string;
   onSelectChannel: (id: string) => void;
-  imageProvider: string;
   onChange: (messages: DisplayMessage[]) => void;
   selectedJobId: string | null;
   onSelectJob: (jobId: string | null) => void;
@@ -33,7 +32,6 @@ export function ChatView({
   messages,
   channelId,
   onSelectChannel,
-  imageProvider,
   onChange,
   selectedJobId,
   onSelectJob,
@@ -98,7 +96,7 @@ export function ChatView({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history, channelId, imageProvider }),
+        body: JSON.stringify({ messages: history, channelId }),
       });
       const data = (await res.json()) as ChatResponse;
 

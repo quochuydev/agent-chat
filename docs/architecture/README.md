@@ -1,7 +1,8 @@
 # AI Video Agent — Technical Architecture
 
 Chat request → AI agent → finished video. The agent is a thin tool-calling loop;
-everything else is an async backend wrapping the existing `video/` scripts.
+everything else is an async job pipeline (`web/src/lib/jobs/`) that calls cloud
+TTS/image APIs and assembles the OpenCut project — all in the same Next.js service.
 
 ## TOC
 
@@ -24,20 +25,19 @@ everything else is an async backend wrapping the existing `video/` scripts.
 flowchart TD
     U[User · chat] --> R[web/ Next.js :3334<br/>api/chat/route.ts]
     R <-->|tool calls| L[OpenAI<br/>picks next tool]
-    R -->|fetch WEB_API_URL| F[video/ FastAPI :3333]
-    F --> Q[(queue)] --> W[worker]
-    W --> P[video/*.py scripts]
-    P --> K[Kokoro-82M · voice]
-    P --> X[FLUX.1-schnell · images]
-    P --> B[build_opencut_project]
-    W --> J[(job store<br/>status·progress·result)]
-    F -->|GET /jobs/id| J
+    R -->|create + submit| Q[(worker queue<br/>lib/jobs/worker.ts)]
+    Q --> RN[runners.ts]
+    RN --> K[OpenAI TTS · voice]
+    RN --> X[Google Imagen · images]
+    RN --> B[build-project.ts]
+    Q --> J[(job store · Postgres<br/>status·progress·result)]
+    R -->|GET /api/jobs/id| J
 ```
 
 ## Responsibility split
 
 ```
 LLM (OpenAI)      → decides next step          [done — route.ts]
-Local models      → voice + images, free       [done — video/]
-YOU build         → FastAPI + tools + jobs      [100% backend]
+Cloud models      → voice + images, per-call    [done — lib/jobs/]
+YOU build         → tools + job pipeline        [100% backend]
 ```

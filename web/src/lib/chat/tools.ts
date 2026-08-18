@@ -2,21 +2,7 @@
 // only the tools + fetch target change.
 
 import { MAX_IMAGES_PER_VIDEO, MAX_VIDEO_DURATION_SECONDS } from "@/lib/config";
-
-const VOICES = [
-  "af_sky",
-  "af_heart",
-  "af_bella",
-  "af_nicole",
-  "af_sarah",
-  "am_michael",
-  "am_adam",
-  "am_eric",
-  "bm_george",
-  "bm_lewis",
-  "bf_emma",
-  "bf_isabella",
-];
+import { VOICES } from "@/lib/jobs/tts";
 
 export const tools = [
   {
@@ -42,12 +28,12 @@ export const tools = [
     type: "function" as const,
     function: {
       name: "generate_voiceover",
-      description: "Start an async job to synthesize narration audio (Kokoro-82M). Returns a job_id.",
+      description: "Start an async job to synthesize narration audio (cloud TTS). Returns a job_id.",
       parameters: {
         type: "object",
         properties: {
           script: { type: "string", description: "The narration text to voice." },
-          voice: { type: "string", enum: VOICES, description: "Kokoro voice id." },
+          voice: { type: "string", enum: VOICES, description: "TTS voice id." },
           speed: { type: "number", description: "Speaking speed, 0.5–2.0 (default 1.0)." },
         },
         required: ["script", "voice"],
@@ -75,7 +61,7 @@ export const tools = [
     type: "function" as const,
     function: {
       name: "generate_images",
-      description: "Start an async job to render one image per prompt (FLUX.1-schnell). Returns a job_id.",
+      description: "Start an async job to render one image per prompt (Google Imagen). Returns a job_id.",
       parameters: {
         type: "object",
         properties: {
@@ -86,7 +72,6 @@ export const tools = [
           },
           width: { type: "number", description: "default 1024" },
           height: { type: "number", description: "default 576" },
-          steps: { type: "number", description: "default 2 (schnell minimum)" },
         },
         required: ["prompts"],
       },
@@ -188,11 +173,3 @@ export const tools = [
     },
   },
 ];
-
-// Tools that map 1:1 to an async connector endpoint (POST → { job_id }).
-export const ASYNC_ENDPOINTS: Record<string, string> = {
-  generate_voiceover: "/voiceover",
-  generate_transcript: "/transcript",
-  generate_images: "/images",
-  build_video: "/build",
-};
